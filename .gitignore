@@ -1,0 +1,35 @@
+# IDE files
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Flask session data
+flask_session/
+
+# Log files
+logs/
+
+# Environment variables
+.env
+
+# OS generated files
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Database files
+*.db
+
+# Password files
+passwd.txt
+
+# Uploaded documents (keep only JSON files)
+*.docx
+*.xlsx
+*.pdf

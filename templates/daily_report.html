@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日报管理 - 日报管理系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="header">
+            <h1>日报管理系统</h1>
+            <div class="user-info">
+                <span class="user-name">欢迎，{{ username }}</span>
+                <a href="/logout" class="btn btn-secondary">退出登录</a>
+            </div>
+        </div>
+        
+        {% if success %}
+        <div class="alert alert-success">
+            {{ success }}
+        </div>
+        {% endif %}
+        {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <!-- 日报填报 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>日报填报</h2>
+            </div>
+            <div class="card-body">
+                <form action="/submit_report" method="POST">
+                    <div class="form-group">
+                        <label for="date" class="form-label">填报日期</label>
+                        <input type="date" class="form-control" id="date" name="date" value="{{ today[:4] }}-{{ today[4:6] }}-{{ today[6:] }}" required>
+                    </div>
+                    
+                    <div id="transactions-container">
+                        {% for i in range(0, max(5, user_report|length)) %}
+                        <div class="transaction-item">
+                            <div class="transaction-header">
+                                <h4>事务 {{ i+1 }}</h4>
+                                <button type="button" class="btn btn-danger btn-sm btn-remove" data-index="{{ i }}">删除</button>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                    <label class="form-label">工作内容 *</label>
+                                    <textarea class="form-control" name="work_content_{{ i }}" rows="3" required>{{ user_report[i]['work_content'] if i < user_report|length else '' }}</textarea>
+                                </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group project-input-group">
+                                        <label class="form-label">关联项目</label>
+                                        <div>
+                                            <input type="text" class="form-control project-combobox" name="project_{{ i }}" value="{{ user_report[i]['project'] if i < user_report|length else '' }}" placeholder="输入关键词搜索或点击选择项目..." list="project_list_{{ i }}" autocomplete="off">
+                                            <datalist id="project_list_{{ i }}">
+                                                <option value="">请选择项目（可留空）</option>
+                                            </datalist>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">下一阶段责任人 *</label>
+                                        <select class="form-control" name="next_responsible_{{ i }}">
+                                            {% for user in all_users %}
+                                            <option value="{{ user }}" {% if user == username %}selected{% endif %}>{{ user }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">是否挂起 *</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input is-suspended" type="checkbox" name="is_suspended_{{ i }}" id="is_suspended_{{ i }}" {% if i < user_report|length and user_report[i]['is_suspended'] %}checked{% endif %} data-index="{{ i }}">
+                                            <label class="form-check-label" for="is_suspended_{{ i }}">是</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">是否求助领导 *</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input is-help" type="checkbox" name="is_help_{{ i }}" id="is_help_{{ i }}" {% if i < user_report|length and user_report[i]['is_help'] %}checked{% endif %} data-index="{{ i }}">
+                                            <label class="form-check-label" for="is_help_{{ i }}">是</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">是否办结 *</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="is_completed_{{ i }}" id="is_completed_{{ i }}" {% if i < user_report|length and user_report[i]['is_completed'] %}checked{% endif %}>
+                                            <label class="form-check-label" for="is_completed_{{ i }}">是</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 挂起相关字段 -->
+                            <div class="suspended-fields" id="suspended_fields_{{ i }}">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">挂起原因</label>
+                                            <textarea class="form-control" name="suspended_reason_{{ i }}" rows="2">{{ user_report[i]['suspended_reason'] if i < user_report|length else '' }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">挂起结束日期</label>
+                                            <input type="date" class="form-control" name="suspended_end_date_{{ i }}" value="{{ user_report[i]['suspended_end_date'] if i < user_report|length and user_report[i]['suspended_end_date'] else '' }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 求助相关字段 -->
+                            <div class="help-fields" id="help_fields_{{ i }}">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="form-label">求助内容</label>
+                                            <textarea class="form-control" name="help_content_{{ i }}" rows="2">{{ user_report[i]['help_content'] if i < user_report|length else '' }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="button-container">
+                        <button type="submit" class="btn btn-success">提交日报</button>
+                        <button type="button" id="btn-add-transaction" class="btn btn-primary btn-add">添加事务</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 日报展示 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="date-selection">
+                    <h2>日报展示</h2>
+                    <input type="date" id="report-date" class="form-control" value="{{ today[:4] }}-{{ today[4:6] }}-{{ today[6:] }}">
+                    <button id="btn-load-report" class="btn btn-secondary">加载</button>
+                    <button id="btn-download-docx" class="btn btn-success">下载日报文档</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="report-content">
+                    <table class="table table-bordered report-table">
+                        <thead>
+                            <!-- 标题行将通过JavaScript动态添加 -->
+                        </thead>
+                        <tbody id="report-table-body">
+                            <!-- 表头和数据将通过JavaScript动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 事务计数器
+        let transactionCount = {{ max(5, user_report|length) }};
+        
+        // 初始化挂起和求助字段的显示状态
+        document.querySelectorAll('.is-suspended').forEach(checkbox => {
+            updateSuspendedFields(checkbox);
+        });
+        
+        document.querySelectorAll('.is-help').forEach(checkbox => {
+            updateHelpFields(checkbox);
+        });
+        
+        // 监听挂起复选框变化
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('is-suspended')) {
+                updateSuspendedFields(e.target);
+            }
+            if (e.target.classList.contains('is-help')) {
+                updateHelpFields(e.target);
+            }
+        });
+        
+        function updateSuspendedFields(checkbox) {
+            const index = checkbox.dataset.index;
+            const fields = document.getElementById(`suspended_fields_${index}`);
+            fields.style.display = checkbox.checked ? 'block' : 'none';
+        }
+        
+        function updateHelpFields(checkbox) {
+            const index = checkbox.dataset.index;
+            const fields = document.getElementById(`help_fields_${index}`);
+            fields.style.display = checkbox.checked ? 'block' : 'none';
+        }
+        
+        // 添加新事务
+        document.getElementById('btn-add-transaction').addEventListener('click', function() {
+            const container = document.getElementById('transactions-container');
+            const newTransaction = document.createElement('div');
+            newTransaction.className = 'transaction-item';
+            newTransaction.innerHTML = `
+                <div class="transaction-header">
+                    <h4>事务 ${transactionCount + 1}</h4>
+                    <button type="button" class="btn btn-danger btn-sm btn-remove" data-index="${transactionCount}">删除</button>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label class="form-label">工作内容 *</label>
+                            <textarea class="form-control" name="work_content_${transactionCount}" rows="3" required></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group project-input-group">
+                            <label class="form-label">关联项目</label>
+                            <div class="relative">
+                                <input type="text" class="form-control project-combobox" name="project_${transactionCount}" placeholder="输入关键词搜索或点击选择项目..." list="project_list_${transactionCount}" autocomplete="off">
+                                <datalist id="project_list_${transactionCount}">
+                                    <option value="">请选择项目（可留空）</option>
+                                </datalist>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">下一阶段责任人 *</label>
+                            <select class="form-control" name="next_responsible_${transactionCount}">
+                                {% for user in all_users %}
+                                <option value="{{ user }}" {% if user == username %}selected{% endif %}>{{ user }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">是否挂起 *</label>
+                            <div class="form-check">
+                                <input class="form-check-input is-suspended" type="checkbox" name="is_suspended_${transactionCount}" id="is_suspended_${transactionCount}" data-index="${transactionCount}">
+                                <label class="form-check-label" for="is_suspended_${transactionCount}">是</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">是否求助领导 *</label>
+                            <div class="form-check">
+                                <input class="form-check-input is-help" type="checkbox" name="is_help_${transactionCount}" id="is_help_${transactionCount}" data-index="${transactionCount}">
+                                <label class="form-check-label" for="is_help_${transactionCount}">是</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">是否办结 *</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_completed_${transactionCount}" id="is_completed_${transactionCount}">
+                                <label class="form-check-label" for="is_completed_${transactionCount}">是</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 挂起相关字段 -->
+                <div class="suspended-fields" id="suspended_fields_${transactionCount}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">挂起原因</label>
+                                <textarea class="form-control" name="suspended_reason_${transactionCount}" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">挂起结束日期</label>
+                                <input type="date" class="form-control" name="suspended_end_date_${transactionCount}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 求助相关字段 -->
+                <div class="help-fields" id="help_fields_${transactionCount}">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="form-label">求助内容</label>
+                                <textarea class="form-control" name="help_content_${transactionCount}" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(newTransaction);
+            transactionCount++;
+            
+            // 绑定项目搜索事件
+            initProjectSearch();
+        });
+        
+        // 删除事务
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-remove')) {
+                const item = e.target.closest('.transaction-item');
+                item.remove();
+                
+                // 重新排序事务序号
+                const transactionItems = document.querySelectorAll('.transaction-item');
+                transactionItems.forEach((item, index) => {
+                    // 更新事务标题的序号
+                    const h4 = item.querySelector('h4');
+                    if (h4) {
+                        h4.textContent = `事务 ${index + 1}`;
+                    }
+                    
+                    // 更新所有输入框和标签的data-index和id属性
+                    const elements = item.querySelectorAll('[data-index]');
+                    elements.forEach(element => {
+                        element.dataset.index = index;
+                        
+                        // 更新id属性
+                        if (element.id) {
+                            const parts = element.id.split('_');
+                            if (parts.length > 1 && !isNaN(parts[parts.length - 1])) {
+                                parts[parts.length - 1] = index;
+                                element.id = parts.join('_');
+                            }
+                        }
+                        
+                        // 更新name属性
+                        if (element.name) {
+                            const parts = element.name.split('_');
+                            if (parts.length > 1 && !isNaN(parts[parts.length - 1])) {
+                                parts[parts.length - 1] = index;
+                                element.name = parts.join('_');
+                            }
+                        }
+                    });
+                });
+            }
+        });
+        
+        // 初始化项目搜索功能
+        function initProjectSearch() {
+            // 为所有项目输入框初始化数据列表
+            document.querySelectorAll('.project-combobox').forEach(combobox => {
+                // 获取对应的datalist元素
+                const listId = combobox.getAttribute('list');
+                const datalist = document.getElementById(listId);
+                
+                // 加载所有项目到datalist
+                loadAllProjects(datalist);
+                
+                // 添加输入事件监听
+                combobox.addEventListener('input', function() {
+                    const value = this.value;
+                    
+                    // 搜索项目
+                    fetch(`/search_projects?keyword=${encodeURIComponent(value)}`)  
+                        .then(response => response.json())
+                        .then(projects => {
+                            // 清空当前选项
+                            datalist.innerHTML = '';
+                            
+                            // 添加空选项
+                            const emptyOption = document.createElement('option');
+                            emptyOption.value = '';
+                            emptyOption.textContent = '请选择项目（可留空）';
+                            datalist.appendChild(emptyOption);
+                            
+                            // 添加匹配的项目
+                            projects.forEach(project => {
+                                // 跳过空选项，因为已经手动添加了
+                                if (project === '') return;
+                                
+                                const option = document.createElement('option');
+                                option.value = project;
+                                option.textContent = project;
+                                datalist.appendChild(option);
+                            });
+                        });
+                });
+                
+                // 点击时显示全量列表
+                combobox.addEventListener('focus', function() {
+                    const listId = this.getAttribute('list');
+                    const datalist = document.getElementById(listId);
+                    loadAllProjects(datalist);
+                });
+            });
+        }
+        
+        // 加载所有项目到datalist
+        function loadAllProjects(datalist) {
+            // 搜索空关键词以获取所有项目
+            fetch('/search_projects?keyword=')  
+                .then(response => response.json())
+                .then(projects => {
+                    // 清空当前选项
+                    datalist.innerHTML = '';
+                    
+                    // 添加空选项
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = '请选择项目（可留空）';
+                    datalist.appendChild(emptyOption);
+                    
+                    // 添加所有项目
+                    projects.forEach(project => {
+                        // 跳过空选项，因为已经手动添加了
+                        if (project === '') return;
+                        
+                        const option = document.createElement('option');
+                        option.value = project;
+                        option.textContent = project;
+                        datalist.appendChild(option);
+                    });
+                });
+        }
+        
+        // 初始化项目搜索
+        initProjectSearch();
+        
+        // 加载日报数据
+        function loadReportData(date) {
+            fetch(`/get_report_data?date=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    // 计算日期格式
+                    const year = date.substr(0, 4);
+                    const month = date.substr(4, 2);
+                    const day = date.substr(6, 2);
+                    
+                    // 获取星期几
+                    const dateObj = new Date(year, month - 1, day);
+                    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+                    const weekday = weekdays[dateObj.getDay()];
+                    
+                    // 设置表格内容
+                    const table = document.querySelector('.report-table');
+                    const thead = table.querySelector('thead');
+                    const tbody = document.getElementById('report-table-body');
+                    
+                    // 清空表格
+                    table.innerHTML = '';
+                    
+                    // 重新创建thead和tbody
+                    const newThead = document.createElement('thead');
+                    const newTbody = document.createElement('tbody');
+                    newTbody.id = 'report-table-body';
+                    table.appendChild(newThead);
+                    table.appendChild(newTbody);
+                    
+                    // 添加标题行
+                    const titleRow = document.createElement('tr');
+                    const titleCell = document.createElement('th');
+                    titleCell.colSpan = 3;
+                    titleCell.innerHTML = `<strong>市场部工作日志${year}年${month}月${day}日（星期${weekday}）</strong>`;
+                    titleCell.className = 'text-center';
+                    titleRow.appendChild(titleCell);
+                    newThead.appendChild(titleRow);
+                    
+                    // 添加表头行
+                    const headerRow = document.createElement('tr');
+                    const headers = ['名称', '当日工作计划', '次日工作计划'];
+                    headers.forEach(text => {
+                        const th = document.createElement('th');
+                        th.textContent = text;
+                        headerRow.appendChild(th);
+                    });
+                    newTbody.appendChild(headerRow);
+                    
+                    // 添加用户数据行
+                    for (const user in data) {
+                        const row = newTbody.insertRow();
+                        row.insertCell(0).textContent = user;
+                        row.insertCell(1).innerHTML = data[user]['d-1'].replace(/\n/g, '<br>') || '无';
+                        row.insertCell(2).innerHTML = data[user]['d'].replace(/\n/g, '<br>') || '无';
+                    }
+                });
+        }
+        
+        // 初始加载今日数据
+        loadReportData('{{ today }}');
+        
+        // 加载按钮事件
+        document.getElementById('btn-load-report').addEventListener('click', function() {
+            const dateInput = document.getElementById('report-date');
+            const date = dateInput.value.replace(/-/g, '');
+            loadReportData(date);
+        });
+        
+        // 下载文档按钮事件
+        document.getElementById('btn-download-docx').addEventListener('click', function() {
+        const dateInput = document.getElementById('report-date');
+        const date = dateInput.value.replace(/-/g, '');
+        
+        // 直接在新窗口打开下载链接，让浏览器处理文件下载
+        window.open(`/download_docx?date=${date}`, '_blank');
+    });
+    </script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
