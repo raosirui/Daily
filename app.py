@@ -208,13 +208,10 @@ def search_projects(keyword):
     projects = load_projects()
     # 添加空选项
     results = ['']  # 空选项，允许不关联项目
-    
-    if not keyword:
+    keywords = keyword.strip().split()
+    if not keywords:
         # 如果没有搜索词，只返回空选项和所有项目
-        return results + projects
-    
-    keywords = keyword.split()
-    
+        return results
     for project in projects:
         match = True
         for k in keywords:
@@ -225,7 +222,7 @@ def search_projects(keyword):
                 break
         if match:
             results.append(project)
-    
+
     return results
 
 # 路由
