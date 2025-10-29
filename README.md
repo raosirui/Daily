@@ -5,24 +5,25 @@
 ## 功能特性
 
 1. **用户认证**
+
    - 使用 passwd.txt 存储用户账号密码
    - 支持登录后会话管理
-
 2. **日报填报**
+
    - 支持动态添加多个事务条目
    - 每个事务包含工作内容、关联项目、挂起状态、求助状态等信息
    - 支持项目搜索（模糊匹配）
-
 3. **日报展示**
+
    - 表格展示所有组员的前一日和当日工作
    - 支持导出为 Word 文档
-
 4. **API接口**
+
    - POST /summary：获取指定日期所有组员工作内容
    - POST /upload：上传项目名称列表
    - GET /search_projects：搜索项目名称
-
 5. **安全与日志**
+
    - 支持 HTTPS 部署
    - 审计日志记录所有操作
 
@@ -118,11 +119,6 @@ python upload_post.py
 ## 注意事项
 
 1. 证书文件路径在 app.py 中配置，默认为：
-   - /etc/letsencrypt/live/hushunlong.top/cert.pem
-   - /etc/letsencrypt/live/hushunlong.top/privkey.pem
-
 2. 日志文件保存在 logs/ 目录下，按日期命名。
-
 3. 日报数据以 JSON 格式保存，文件名格式为：yyyyMMdd_用户名.json。
-
 4. 系统重启不会覆盖历史数据。
