@@ -31,6 +31,13 @@ logging.basicConfig(
 )
 
 # 工具函数
+
+def ensure_directories():
+    """确保必要的目录结构存在"""
+    directories = ['data/daily', 'data/docx']
+    for directory in directories:
+        if not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
 def log_activity(username, activity):
     """记录用户活动"""
     log_filename = os.path.join('logs', datetime.datetime.now().strftime('%Y%m%d') + '.log')
@@ -72,9 +79,11 @@ def save_projects(projects):
 
 def save_daily_report(username, date, report_data):
     """保存日报数据"""
+    # 确保必要的目录存在
+    ensure_directories()
     # 确保使用统一的日期格式(YYYYMMDD)，移除可能存在的连字符
     normalized_date = date.replace('-', '')
-    filename = f"{normalized_date}_{username}.json"
+    filename = f"data/daily/{normalized_date}_{username}.json"
     try:
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(report_data, f, ensure_ascii=False, indent=2)
@@ -85,9 +94,11 @@ def save_daily_report(username, date, report_data):
 
 def load_daily_report(username, date):
     """加载日报数据"""
+    # 确保必要的目录存在
+    ensure_directories()
     # 确保使用统一的日期格式(YYYYMMDD)，移除可能存在的连字符
     normalized_date = date.replace('-', '')
-    filename = f"{normalized_date}_{username}.json"
+    filename = f"data/daily/{normalized_date}_{username}.json"
     try:
         if os.path.exists(filename):
             with open(filename, 'r', encoding='utf-8') as f:
@@ -98,6 +109,9 @@ def load_daily_report(username, date):
 
 def generate_docx_report(date, data):
     """生成Word文档报告"""
+    # 确保必要的目录存在
+    ensure_directories()
+    
     doc = Document()
     
     # 获取星期几
@@ -178,10 +192,11 @@ def generate_docx_report(date, data):
             run._element.rPr.rFonts.set(qn('w:eastAsia'), '黑体')
         tomorrow_cell.paragraphs[0].space_after = Pt(6)
     
-    # 保存文档
+    # 保存文档到data/docx目录
     filename = f"市场部工作日志{date_obj.year}.{date_obj.month:02d}.{date_obj.day:02d}.docx"
-    doc.save(filename)
-    return filename
+    full_path = f"data/docx/{filename}"
+    doc.save(full_path)
+    return full_path
 
 def get_all_users():
     """获取所有用户列表"""
@@ -264,6 +279,9 @@ def submit_report():
     username = session['username']
     date = request.form.get('date')
     
+    # 加载项目列表用于校验
+    valid_projects = load_projects()
+    
     # 收集多个事务
     transactions = []
     i = 0
@@ -277,6 +295,10 @@ def submit_report():
         help_content = request.form.get(f'help_content_{i}', '')
         next_responsible = request.form.get(f'next_responsible_{i}', username)
         is_completed = request.form.get(f'is_completed_{i}') == 'on'
+        
+        # 校验项目名：如果填写了项目名，则必须在项目列表中
+        if project and project.strip() not in valid_projects:
+            return redirect(url_for('daily_report', error=f'事务{i+1}的项目名"{project}"不在项目列表中，请选择有效的项目名！'))
         
         if work_content.strip():
             transaction = {
@@ -559,6 +581,8 @@ def static_file(filename):
     return app.send_static_file(filename)
 
 if __name__ == '__main__':
+    # 确保必要的目录存在
+    ensure_directories()
     # 创建session目录
     if not os.path.exists(app.config['SESSION_FILE_DIR']):
         os.makedirs(app.config['SESSION_FILE_DIR'])
