@@ -602,10 +602,10 @@ if __name__ == '__main__':
     else:
         # Linux环境下的证书路径
         # （已屏蔽需要配置！）
-        cert_path = ''
-        key_path = ''
-        chain_path = ''
-        combined_cert_path = '/tmp/combined_cert.pem'
+        cert_path = '/home/hu/oa_systems/cert.pem'
+        key_path = '/home/hu/oa_systems/privkey.pem'
+        chain_path = '/home/hu/oa_systems/chain.pem'
+        combined_cert_path = '/home/hu/oa_systems/combined_cert.pem'
     
     # 检查证书文件是否存在
     cert_exists = os.path.exists(cert_path)
@@ -617,8 +617,7 @@ if __name__ == '__main__':
     if cert_exists and key_exists:
         # 证书和私钥都存在，尝试使用HTTPS
         print("检测到证书文件，尝试启动HTTPS服务...")
-        print(f"访问地址: https://localhost:5000")
-        
+        print(f"访问地址: https://localhost:5501")
         # 尝试合并证书
         try:
             # 创建证书目录（如果在Windows下且目录不存在）
@@ -641,15 +640,15 @@ if __name__ == '__main__':
                         chain_content = chain_file.read()
                     combined_content += '\n' + chain_content
                     print("已包含中间证书")
-                
+
                 # 写入合并后的证书
                 with open(combined_cert_path, 'w') as combined_file:
                     combined_file.write(combined_content)
-                
+
                 print(f"已创建组合证书文件: {combined_cert_path}")
-                
+
                 # 使用HTTPS启动
-                app.run(debug=False, host='0.0.0.0', port=5000,
+                app.run(debug=False, host='0.0.0.0', port=5501,
                         ssl_context=(combined_cert_path, key_path))
         except Exception as e:
             print(f"HTTPS配置失败: {e}")
@@ -658,9 +657,9 @@ if __name__ == '__main__':
             print(f"  - 证书: {cert_path}")
             print(f"  - 私钥: {key_path}")
             print(f"  - 中间证书: {chain_path} (可选)")
-    
+
     # 如果证书不存在或HTTPS配置失败，使用HTTP模式启动（开发模式）
     print("\n使用HTTP模式启动（开发模式）...")
-    print("访问地址: http://localhost:5000")
+    print("访问地址: http://localhost:5501")
     print("注意：生产环境请确保证书配置正确以使用HTTPS")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5501)
