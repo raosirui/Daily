@@ -569,10 +569,11 @@ def api_search_projects():
         passwords = load_passwords()
         if not (username in passwords and passwords[username] == password):
             return jsonify({'error': '未授权'}), 401
-    
+    else:
+        username = session['username']
     keyword = request.args.get('keyword', '')
     results = search_projects(keyword)
-    
+    log_activity(username, f'SEARCH PROJECT: {results}')
     return jsonify(results)
 
 # 静态文件路由

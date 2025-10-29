@@ -158,7 +158,6 @@
                 <div class="date-selection">
                     <h2>日报展示</h2>
                     <input type="date" id="report-date" class="form-control" value="{{ today[:4] }}-{{ today[4:6] }}-{{ today[6:] }}">
-                    <button id="btn-load-report" class="btn btn-secondary">加载</button>
                     <button id="btn-download-docx" class="btn btn-success">下载日报文档</button>
                 </div>
             </div>
@@ -509,10 +508,9 @@
         // 初始加载今日数据
         loadReportData('{{ today }}');
         
-        // 加载按钮事件
-        document.getElementById('btn-load-report').addEventListener('click', function() {
-            const dateInput = document.getElementById('report-date');
-            const date = dateInput.value.replace(/-/g, '');
+        // 日期选择器change事件 - 自动加载日报数据
+        document.getElementById('report-date').addEventListener('change', function() {
+            const date = this.value.replace(/-/g, '');
             loadReportData(date);
         });
         
