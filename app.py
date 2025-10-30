@@ -57,6 +57,17 @@ def load_passwords():
         print(f"Error loading passwords: {e}")
     return passwords
 
+def save_passwords(passwords):
+    """保存用户密码"""
+    try:
+        with open('passwd.txt', 'w', encoding='utf-8') as f:
+            for username, password in passwords.items():
+                f.write(f"{username}:{password}\n")
+        return True
+    except Exception as e:
+        print(f"Error saving passwords: {e}")
+        return False
+
 def load_projects():
     """加载项目列表"""
     try:
@@ -251,6 +262,32 @@ def logout():
         log_activity(session['username'], 'Logout')
         session.pop('username', None)
     return redirect(url_for('index'))
+
+@app.route('/change_password', methods=['POST'])
+def change_password():
+    username = request.form.get('username')
+    old_password = request.form.get('old_password')
+    new_password1 = request.form.get('new_password1')
+    new_password2 = request.form.get('new_password2')
+    
+    # 加载现有密码
+    passwords = load_passwords()
+    
+    # 验证用户存在且原始密码正确
+    if username not in passwords or passwords[username] != old_password:
+        return jsonify({'success': False, 'message': '用户名或原始密码错误'})
+    
+    # 验证新密码
+    if not new_password1 or new_password1 != new_password2:
+        return jsonify({'success': False, 'message': '两次输入的新密码不一致'})
+    
+    # 更新密码
+    passwords[username] = new_password1
+    if save_passwords(passwords):
+        log_activity(username, 'Change Password')
+        return jsonify({'success': True, 'message': '密码修改成功'})
+    else:
+        return jsonify({'success': False, 'message': '密码修改失败，请重试'})
 
 @app.route('/daily_report')
 def daily_report():
