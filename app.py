@@ -296,14 +296,20 @@ def daily_report():
     
     username = session['username']
     today = datetime.datetime.now().strftime('%Y%m%d')
+    
+    # 从URL参数获取日期，如果没有则使用今天的日期
+    report_date = request.args.get('report_date', today)
+    # 规范化日期格式，移除可能的连字符
+    report_date = report_date.replace('-', '')
+    
     projects = load_projects()
     all_users = get_all_users()
     
-    # 获取当前用户的日报数据
-    user_report = load_daily_report(username, today)
+    # 获取当前用户指定日期的日报数据
+    user_report = load_daily_report(username, report_date)
     
-    log_activity(username, 'GET /daily_report')
-    return render_template('daily_report.html', username=username, projects=projects, today=today, user_report=user_report, all_users=all_users)
+    log_activity(username, f'GET /daily_report?report_date={report_date}')
+    return render_template('daily_report.html', username=username, projects=projects, today=today, user_report=user_report, all_users=all_users, report_date=report_date)
 
 @app.route('/submit_report', methods=['POST'])
 def submit_report():
@@ -360,61 +366,66 @@ def submit_report():
 def get_report_data():
     if 'username' not in session:
         return jsonify({'error': '未登录'}), 401
-    
+
     username = session['username']
     date = request.args.get('date')
-    
+
     if not date:
         date = datetime.datetime.now().strftime('%Y%m%d')
-    
+
     # 计算d-1日期
     date_obj = datetime.datetime.strptime(date, '%Y%m%d')
     prev_date = (date_obj - datetime.timedelta(days=1)).strftime('%Y%m%d')
-    
+    next_date = (date_obj + datetime.timedelta(days=1)).strftime('%Y%m%d')
+
     report_data = {}
     all_users = get_all_users()
-    
+
     for user in all_users:
         # 获取d日工作
         today_works = load_daily_report(user, date)
         today_content = []
         for idx, work in enumerate(today_works, 1):
             # 构建完整的工作内容，包含所有信息
-            content_str = f"{idx}. {work['work_content']}"
-            
+            content_str = f"{idx}. "
+
             # 添加项目信息
             if work.get('project'):
-                content_str += f" [{work['project']}]"
-            
+                content_str += f"[{work['project']}]: "
+
+            content_str += f"{work['work_content']}"
+
             # 添加挂起信息
             if work.get('is_suspended'):
                 if work.get('suspended_reason'):
                     content_str += f"\n   挂起原因: {work['suspended_reason']}"
                 if work.get('suspended_end_date'):
                     content_str += f"\n   挂起结束日期: {work['suspended_end_date']}"
-            
+
             # 添加求助信息
             if work.get('is_help'):
                 if work.get('help_content'):
                     content_str += f"\n   求助内容: {work['help_content']}"
-            
+
             # 添加负责人信息
             if work.get('next_responsible') and work['next_responsible'] != user:
                 content_str += f"\n   负责人: {work['next_responsible']}"
-            
+
             today_content.append(content_str)
-        
-        # 获取d-1日工作
-        prev_works = load_daily_report(user, prev_date)
-        prev_content = []
-        for idx, work in enumerate(prev_works, 1):
+
+        # 获取d+1日工作
+        next_works = load_daily_report(user, next_date)
+        next_content = []
+        for idx, work in enumerate(next_works, 1):
             # 构建完整的工作内容，包含所有信息
-            content_str = f"{idx}. {work['work_content']}"
-            
+            content_str = f"{idx}. "
+
             # 添加项目信息
             if work.get('project'):
-                content_str += f" [{work['project']}]"
-            
+                content_str += f"[{work['project']}]: "
+
+            content_str += f"{work['work_content']}"
+
             # 添加挂起信息
             if work.get('is_suspended'):
                 if work.get('suspended_reason'):
@@ -426,18 +437,18 @@ def get_report_data():
             if work.get('is_help'):
                 if work.get('help_content'):
                     content_str += f"\n   求助内容: {work['help_content']}"
-            
+
             # 添加负责人信息
             if work.get('next_responsible') and work['next_responsible'] != user:
                 content_str += f"\n   负责人: {work['next_responsible']}"
-            
-            prev_content.append(content_str)
-        
+
+            next_content.append(content_str)
+
         report_data[user] = {
-            'd': '\n'.join(today_content),
-            'd-1': '\n'.join(prev_content)
+            'd': '\n'.join(next_content),
+            'd-1': '\n'.join(today_content)
         }
-    
+
     log_activity(username, f'GET REPORT DATA {date}')
     return jsonify(report_data)
 

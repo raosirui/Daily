@@ -37,11 +37,11 @@
                 <form action="/submit_report" method="POST">
                     <div class="form-group">
                         <label for="date" class="form-label">填报日期</label>
-                        <input type="date" class="form-control" id="date" name="date" value="{{ today[:4] }}-{{ today[4:6] }}-{{ today[6:] }}" required>
+                        <input type="date" class="form-control" id="date" name="date" value="{{ report_date[:4] }}-{{ report_date[4:6] }}-{{ report_date[6:] }}" required>
                     </div>
                     
                     <div id="transactions-container">
-                        {% for i in range(0, max(1, user_report|length)) %}
+                        {% for i in range(0, 1) %}
                         <div class="transaction-item">
                             <div class="transaction-header">
                                 <h4>事务 {{ i+1 }}</h4>
@@ -157,7 +157,7 @@
             <div class="card-header">
                 <div class="date-selection">
                     <h2>日报展示</h2>
-                    <input type="date" id="report-date" class="form-control" value="{{ today[:4] }}-{{ today[4:6] }}-{{ today[6:] }}">
+                    <input type="date" id="report-date" class="form-control" value="{{ report_date[:4] }}-{{ report_date[4:6] }}-{{ report_date[6:] }}">
                     <button id="btn-download-docx" class="btn btn-success">下载日报文档</button>
                 </div>
             </div>
@@ -179,7 +179,14 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // 事务计数器
-        let transactionCount = {{ max(1, user_report|length) }};
+        let transactionCount = 1;
+        
+        // 为日报填报日期选择器添加change事件监听
+        document.getElementById('date').addEventListener('change', function() {
+            const selectedDate = this.value;
+            // 重新加载页面，带上所选日期参数
+            window.location.href = `/daily_report?report_date=${selectedDate}`;
+        });
         
         // 初始化挂起和求助字段的显示状态
         document.querySelectorAll('.is-suspended').forEach(checkbox => {
@@ -505,8 +512,8 @@
                 });
         }
         
-        // 初始加载今日数据
-        loadReportData('{{ today }}');
+        // 初始加载指定日期数据
+        loadReportData('{{ report_date }}');
         
         // 日期选择器change事件 - 自动加载日报数据
         document.getElementById('report-date').addEventListener('change', function() {
@@ -516,12 +523,12 @@
         
         // 下载文档按钮事件
         document.getElementById('btn-download-docx').addEventListener('click', function() {
-        const dateInput = document.getElementById('report-date');
-        const date = dateInput.value.replace(/-/g, '');
-        
-        // 直接在新窗口打开下载链接，让浏览器处理文件下载
-        window.open(`/download_docx?date=${date}`, '_blank');
-    });
+            const dateInput = document.getElementById('report-date');
+            const date = dateInput.value.replace(/-/g, '');
+            
+            // 直接在新窗口打开下载链接，让浏览器处理文件下载
+            window.open(`/download_docx?date=${date}`, '_blank');
+        });
     </script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
