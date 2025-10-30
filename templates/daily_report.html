@@ -145,9 +145,9 @@
                     </div>
                     
                     <div class="button-container">
-                        <button type="submit" class="btn btn-success">提交日报</button>
-                        <button type="button" id="btn-add-transaction" class="btn btn-primary btn-add">添加事务</button>
-                    </div>
+                    <button type="submit" id="submit-form" class="btn btn-success">提交日报</button>
+                    <button type="button" id="btn-add-transaction" class="btn btn-primary btn-add">添加事务</button>
+                </div>
                 </form>
             </div>
         </div>
@@ -528,6 +528,44 @@
             
             // 直接在新窗口打开下载链接，让浏览器处理文件下载
             window.open(`/download_docx?date=${date}`, '_blank');
+        });
+        
+        // 表单提交验证 - 确保挂起时间必须大于填报时间
+        document.getElementById('submit-form').addEventListener('click', function(e) {
+            // 阻止默认提交行为
+            e.preventDefault();
+            
+            // 获取填报日期
+            const reportDate = document.getElementById('date').value;
+            
+            // 遍历所有事务
+            const transactionItems = document.querySelectorAll('.transaction-item');
+            let isValid = true;
+            let errorMessage = '';
+            
+            transactionItems.forEach((item, index) => {
+                // 检查是否被标记为挂起
+                const isSuspended = item.querySelector(`.is-suspended`).checked;
+                
+                // 如果被标记为挂起，检查挂起结束日期
+                if (isSuspended) {
+                    const suspendedEndDate = item.querySelector(`input[name^="suspended_end_date_"]`).value;
+                    
+                    // 如果填写了挂起结束日期，验证是否大于填报日期
+                    if (suspendedEndDate && suspendedEndDate <= reportDate) {
+                        isValid = false;
+                        errorMessage = `事务 ${index + 1} 的挂起结束日期必须大于填报日期！`;
+                    }
+                }
+            });
+            
+            // 如果验证通过，提交表单
+            if (isValid) {
+                document.querySelector('form').submit();
+            } else {
+                // 显示错误消息
+                alert(errorMessage);
+            }
         });
     </script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
