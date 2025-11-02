@@ -223,12 +223,14 @@ def search_projects(keyword):
     if not keywords:
         # 如果没有搜索词，只返回空选项和所有项目
         return results
+    
     for project in projects:
+        name = project[project.find("-") + 1:]
         match = True
         for k in keywords:
             # 使用正则表达式进行*<搜索内容>*匹配
             # 转换为不区分大小写的匹配
-            if not re.search(re.escape(k), project, re.IGNORECASE):
+            if not re.search(re.escape(k), name, re.IGNORECASE):
                 match = False
                 break
         if match:
@@ -269,18 +271,18 @@ def change_password():
     old_password = request.form.get('old_password')
     new_password1 = request.form.get('new_password1')
     new_password2 = request.form.get('new_password2')
-    
+
     # 加载现有密码
     passwords = load_passwords()
-    
+
     # 验证用户存在且原始密码正确
     if username not in passwords or passwords[username] != old_password:
         return jsonify({'success': False, 'message': '用户名或原始密码错误'})
-    
+
     # 验证新密码
     if not new_password1 or new_password1 != new_password2:
         return jsonify({'success': False, 'message': '两次输入的新密码不一致'})
-    
+
     # 更新密码
     passwords[username] = new_password1
     if save_passwords(passwords):
@@ -296,12 +298,12 @@ def daily_report():
     
     username = session['username']
     today = datetime.datetime.now().strftime('%Y%m%d')
-    
+
     # 从URL参数获取日期，如果没有则使用今天的日期
     report_date = request.args.get('report_date', today)
     # 规范化日期格式，移除可能的连字符
     report_date = report_date.replace('-', '')
-    
+
     projects = load_projects()
     all_users = get_all_users()
     
@@ -388,13 +390,13 @@ def get_report_data():
         for idx, work in enumerate(today_works, 1):
             # 构建完整的工作内容，包含所有信息
             content_str = f"{idx}. "
-
+            
             # 添加项目信息
             if work.get('project'):
                 content_str += f"[{work['project']}]: "
 
             content_str += f"{work['work_content']}"
-
+            
             # 添加挂起信息
             if work.get('is_suspended'):
                 if work.get('suspended_reason'):
@@ -412,7 +414,7 @@ def get_report_data():
                 content_str += f"\n   负责人: {work['next_responsible']}"
 
             today_content.append(content_str)
-
+        
         # 获取d+1日工作
         next_works = load_daily_report(user, next_date)
         next_content = []
@@ -425,7 +427,7 @@ def get_report_data():
                 content_str += f"[{work['project']}]: "
 
             content_str += f"{work['work_content']}"
-
+            
             # 添加挂起信息
             if work.get('is_suspended'):
                 if work.get('suspended_reason'):
@@ -441,9 +443,9 @@ def get_report_data():
             # 添加负责人信息
             if work.get('next_responsible') and work['next_responsible'] != user:
                 content_str += f"\n   负责人: {work['next_responsible']}"
-
+            
             next_content.append(content_str)
-
+        
         report_data[user] = {
             'd': '\n'.join(next_content),
             'd-1': '\n'.join(today_content)
@@ -466,7 +468,8 @@ def download_docx():
     # 计算d-1日期
     date_obj = datetime.datetime.strptime(date, '%Y%m%d')
     prev_date = (date_obj - datetime.timedelta(days=1)).strftime('%Y%m%d')
-    
+    next_date = (date_obj + datetime.timedelta(days=1)).strftime('%Y%m%d')
+
     report_data = {}
     all_users = get_all_users()
     
@@ -506,10 +509,10 @@ def download_docx():
             
             today_content.append(content_str)
         
-        # 获取d-1日工作
-        prev_works = load_daily_report(user, prev_date)
-        prev_content = []
-        for idx, work in enumerate(prev_works, 1):
+        # 获取d+1日工作
+        next_works = load_daily_report(user, next_date)
+        next_content = []
+        for idx, work in enumerate(next_works, 1):
             # 构建完整的工作内容，包含所有信息
             content_str = f"{idx}. {work['work_content']}"
             
@@ -539,11 +542,11 @@ def download_docx():
             if status:
                 content_str += f" [{'/'.join(status)}]"
             
-            prev_content.append(content_str)
+            next_content.append(content_str)
         
         report_data[user] = {
-            'd': '\n'.join(today_content) if today_content else '无',
-            'd-1': '\n'.join(prev_content) if prev_content else '无'
+            'd': '\n'.join(next_content) if next_content else '无',
+            'd-1': '\n'.join(today_content) if today_content else '无'
         }
     
     # 生成docx文件
@@ -637,7 +640,7 @@ if __name__ == '__main__':
     # 检查是否在Windows环境下运行
     import platform
     is_windows = platform.system() == 'Windows'
-    
+    is_https = False
     # 证书路径
     if is_windows:
         # Windows环境下的证书路径示例
@@ -661,6 +664,7 @@ if __name__ == '__main__':
     print("启动Flask日报管理系统...")
     
     if cert_exists and key_exists:
+        is_https = True
         # 证书和私钥都存在，尝试使用HTTPS
         print("检测到证书文件，尝试启动HTTPS服务...")
         print(f"访问地址: https://localhost:5501")
@@ -697,15 +701,16 @@ if __name__ == '__main__':
                 app.run(debug=False, host='0.0.0.0', port=5501,
                         ssl_context=(combined_cert_path, key_path))
         except Exception as e:
+            is_https = False
             print(f"HTTPS配置失败: {e}")
             print("注意：在Windows环境下，证书路径应为certs文件夹")
             print("请将证书文件复制到以下位置:")
             print(f"  - 证书: {cert_path}")
             print(f"  - 私钥: {key_path}")
             print(f"  - 中间证书: {chain_path} (可选)")
-
-    # 如果证书不存在或HTTPS配置失败，使用HTTP模式启动（开发模式）
-    print("\n使用HTTP模式启动（开发模式）...")
-    print("访问地址: http://localhost:5501")
-    print("注意：生产环境请确保证书配置正确以使用HTTPS")
-    app.run(debug=True, host='0.0.0.0', port=5501)
+    if is_https == False:
+        # 如果证书不存在或HTTPS配置失败，使用HTTP模式启动（开发模式）
+        print("\n使用HTTP模式启动（开发模式）...")
+        print("访问地址: http://localhost:5501")
+        print("注意：生产环境请确保证书配置正确以使用HTTPS")
+        app.run(debug=True, host='0.0.0.0', port=5501)
