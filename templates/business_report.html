@@ -139,55 +139,7 @@
             </div>
         </div>
         
-        <!-- 商机列表 -->
-        <div class="card">
-            <div class="card-header">
-                <h2>已上报商机列表</h2>
-                <a href="/download_business_opportunities" class="btn btn-primary download-btn">下载商机数据(TXT)</a>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>项目名称</th>
-                                <th>建设单位</th>
-                                <th>信息来源</th>
-                                <th>预估金额</th>
-                                <th>责任人</th>
-                                <th>项目性质</th>
-                                <th>状态</th>
-                                <th>跟踪情况</th>
-                                <th>备注</th>
-                                <th>上报人</th>
-                                <th>上报时间</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for opportunity in opportunities %}
-                            <tr>
-                                <td>{{ opportunity.project_name }}</td>
-                                <td>{{ opportunity.construction_unit }}</td>
-                                <td>{{ opportunity.source }}</td>
-                                <td>{{ opportunity.estimated_amount if opportunity.estimated_amount else '-' }}</td>
-                                <td>{{ opportunity.responsible_person }}</td>
-                                <td>{{ opportunity.project_type }}</td>
-                                <td>{{ opportunity.status }}</td>
-                                <td>{{ opportunity.tracking_info if opportunity.tracking_info else '-' }}</td>
-                                <td>{{ opportunity.remarks if opportunity.remarks else '-' }}</td>
-                                <td>{{ opportunity.reporter }}</td>
-                                <td>{{ opportunity.report_time }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="11" class="text-center">暂无商机记录</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
