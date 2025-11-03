@@ -34,11 +34,37 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
     padding: 20px;
     border-bottom: 2px solid rgba(67, 97, 238, 0.1);
     width: 100%;
     box-sizing: border-box;
+}
+
+/* 标签切换样式 */
+.nav-tabs {
+    display: flex;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tab {
+    padding: 12px 24px;
+    text-decoration: none;
+    color: var(--secondary-color);
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.nav-tab:hover {
+    color: var(--primary-color);
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.nav-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background-color: rgba(0, 0, 0, 0.02);
 }
 
 .header h1 {
@@ -86,6 +112,12 @@ body {
 .card-header h2 {
     margin: 0;
     font-size: 1.5rem;
+    display: inline-block;
+}
+
+.download-btn {
+    float: right;
+    margin-top: 0.5rem;
 }
 
 .card-body {

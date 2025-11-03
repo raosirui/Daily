@@ -88,6 +88,78 @@ def save_projects(projects):
         print(f"Error saving projects: {e}")
         return False
 
+def load_project_types():
+    """加载项目类型列表"""
+    try:
+        if os.path.exists('project_types.json'):
+            with open('project_types.json', 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading project types: {e}")
+    return []
+
+def load_opportunity_status():
+    """加载商机状态列表"""
+    try:
+        if os.path.exists('business_opportunity_status.json'):
+            with open('business_opportunity_status.json', 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading opportunity status: {e}")
+    return []
+
+def save_business_opportunity(opportunity_data):
+    """保存商机数据"""
+    # 确保数据目录存在
+    data_dir = 'data/business'
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    
+    # 读取现有商机数据
+    all_opportunities = []
+    try:
+        if os.path.exists(os.path.join(data_dir, 'opportunities.json')):
+            with open(os.path.join(data_dir, 'opportunities.json'), 'r', encoding='utf-8') as f:
+                all_opportunities = json.load(f)
+    except Exception as e:
+        print(f"Error loading existing opportunities: {e}")
+    
+    # 添加新商机
+    all_opportunities.append(opportunity_data)
+    
+    # 保存更新后的数据
+    try:
+        with open(os.path.join(data_dir, 'opportunities.json'), 'w', encoding='utf-8') as f:
+            json.dump(all_opportunities, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving business opportunity: {e}")
+        return False
+
+def load_business_opportunities():
+    """加载所有商机数据"""
+    data_dir = 'data/business'
+    file_path = os.path.join(data_dir, 'opportunities.json')
+    
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading business opportunities: {e}")
+    return []
+
+def check_project_exists(project_name):
+    """检查项目名称是否已存在（截取项目名部分进行匹配）"""
+    projects = load_projects()
+    # 提取项目名部分进行匹配
+    for project in projects:
+        if '-' in project:
+            name_part = project.split('-', 1)[1].strip()
+            if name_part == project_name:
+                return True
+    return False
+
 def save_daily_report(username, date, report_data):
     """保存日报数据"""
     # 确保必要的目录存在
@@ -312,6 +384,126 @@ def daily_report():
     
     log_activity(username, f'GET /daily_report?report_date={report_date}')
     return render_template('daily_report.html', username=username, projects=projects, today=today, user_report=user_report, all_users=all_users, report_date=report_date)
+
+@app.route('/business_report')
+def business_report():
+    if 'username' not in session:
+        return redirect(url_for('index'))
+    
+    username = session['username']
+    all_users = get_all_users()
+    project_types = load_project_types()
+    opportunity_status = load_opportunity_status()
+    opportunities = load_business_opportunities()
+    
+    log_activity(username, 'GET /business_report')
+    return render_template('business_report.html', username=username, all_users=all_users, 
+                          project_types=project_types, opportunity_status=opportunity_status, 
+                          opportunities=opportunities)
+
+@app.route('/submit_business', methods=['POST'])
+def submit_business():
+    if 'username' not in session:
+        return redirect(url_for('index'))
+    
+    username = session['username']
+    
+    # 获取表单数据
+    project_name = request.form.get('project_name').strip()
+    construction_unit = request.form.get('construction_unit').strip()
+    source = request.form.get('source').strip()
+    estimated_amount = request.form.get('estimated_amount', '').strip()
+    responsible_person = request.form.get('responsible_person')
+    project_type = request.form.get('project_type')
+    status = request.form.get('status')
+    tracking_info = request.form.get('tracking_info', '').strip()
+    remarks = request.form.get('remarks', '').strip()
+    
+    # 检查项目名称是否已存在
+    if check_project_exists(project_name):
+        return redirect(url_for('business_report', error='项目名称已存在，请输入新项目名称！'))
+    
+    # 处理预估金额
+    estimated_amount = float(estimated_amount) if estimated_amount else None
+    
+    # 构建商机数据
+    opportunity_data = {
+        'project_name': project_name,
+        'construction_unit': construction_unit,
+        'source': source,
+        'estimated_amount': estimated_amount,
+        'responsible_person': responsible_person,
+        'project_type': project_type,
+        'status': status,
+        'tracking_info': tracking_info,
+        'remarks': remarks,
+        'report_time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'reporter': username
+    }
+    
+    # 保存商机数据
+    if save_business_opportunity(opportunity_data):
+        log_activity(username, f'SUBMIT BUSINESS OPPORTUNITY: {project_name}')
+        return redirect(url_for('business_report', success='商机提交成功！'))
+    else:
+        return redirect(url_for('business_report', error='商机提交失败，请重试！'))
+
+@app.route('/check_project_exists', methods=['GET'])
+def api_check_project_exists():
+    if 'username' not in session:
+        return jsonify({'error': '未登录'}), 401
+    
+    project_name = request.args.get('project_name', '').strip()
+    exists = check_project_exists(project_name)
+    
+    return jsonify({'exists': exists})
+
+@app.route('/get_business_opportunities', methods=['GET'])
+def api_get_business_opportunities():
+    # 验证用户登录状态
+    if 'username' not in session:
+        # 允许通过API调用（带有用户名密码参数）
+        username = request.args.get('username')
+        password = request.args.get('password')
+        passwords = load_passwords()
+        if not (username in passwords and passwords[username] == password):
+            return jsonify({'error': '未授权'}), 401
+    else:
+        username = session['username']
+    
+    opportunities = load_business_opportunities()
+    log_activity(username, f'GET BUSINESS OPPORTUNITIES: {len(opportunities)} items')
+    return jsonify(opportunities)
+
+@app.route('/download_business_opportunities', methods=['GET'])
+def download_business_opportunities():
+    # 验证用户登录状态
+    if 'username' not in session:
+        return redirect(url_for('index'))
+    
+    username = session['username']
+    
+    # 加载商机数据
+    opportunities = load_business_opportunities()
+    
+    # 将商机数据转换为JSON字符串
+    import json
+    json_data = json.dumps(opportunities, ensure_ascii=False, indent=2)
+    
+    # 设置文件名
+    from datetime import datetime
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'business_opportunities_{timestamp}.txt'
+    
+    # 记录操作日志
+    log_activity(username, f'DOWNLOAD BUSINESS OPPORTUNITIES: {len(opportunities)} items')
+    
+    # 返回文件下载响应
+    from flask import make_response
+    response = make_response(json_data)
+    response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
 
 @app.route('/submit_report', methods=['POST'])
 def submit_report():
